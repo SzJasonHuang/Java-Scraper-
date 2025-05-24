@@ -12,15 +12,43 @@ import com.data.Product;
 
 
 public class Scraper {
-    private static final String URL = "https://www.scrapingcourse.com/ecommerce/";
+    //private static final String URL = "https://www.scrapingcourse.com/ecommerce/";
+    private static final String URL1 = "https://www.scrapingcourse.com/ecommerce/";
+    private static final String URL2 = "https://www.uniqlo.com/us/en/men/tops/t-shirts?path=%2C%2C23386%2C";
 
     public static List<Product> scrapeProducts(String url){
-        List<Product> products = new ArrayList();
+        List<Product> products = new ArrayList<>();
         while(url != null){
             try{
                 Document doc = Jsoup.connect(url).get();
-               
-            }
+                Element productElements = doc.selectFirst("li.product");
+                for (Element productElement : productElements){
+                    Product product = new Product();
+                    // extracting product details safely
+                   Element linkElement = productElement.selectFirst(".woocommerce-LoopProduct-link");
+                   Element imgElement = productElement.selectFirst(".product-image");
+                   Element nameElement = productElement.selectFirst(".product-name");
+                   Element priceElement = productElement.selectFirst(".price");
+
+                   product.setUrl(linkElement != null ? linkElement.attr("href") : "N/A");
+                   product.setImage(imgElement != null ? imgElement.attr("src") : "N/A");
+                   product.setName(nameElement != null ? nameElement.text() : "N/A");
+                   product.setPrice(priceElement != null ? priceElement.text() : "N/A");
+
+                   // add the product to the list
+                   products.add(product);
+               }
+               Element nextButton = doc.selectFirst("a.next");
+               if (nextButton != null) {
+                   String nextPageUrl = nextButton.attr("href");
+                   if (!nextPageUrl.startsWith("http")) {
+                       nextPageUrl = url + nextPageUrl.replaceFirst("^/", "");
+                   }
+                   url = nextPageUrl; // update URL for next iteration
+               } else {
+                   url = null; // no more pages, exit loop
+               }
+                }
             catch(IOException e){
                 System.err.println("Error Fetching" + e.getMessage());
                 break;
@@ -30,36 +58,7 @@ public class Scraper {
     }
 
     public static void main(String[] args) {
-        Document doc;
-
-        try {
-            doc = Jsoup
-                    .connect("https://www.scrapingcourse.com/ecommerce/")
-                    .userAgent(
-                            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36")
-                    .header("Accept-Language", "*")
-                    .get();
-
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-            
-        }
-        List<Product> lop = new ArrayList<>();
-        Elements productElements = doc.select("li.product");
-
-        for (Element e : productElements) {
-            Product product = new Product();
-
-            product.setUrl(e.selectFirst("a").attr("href"));
-            product.setImage(e.selectFirst("img").attr("src"));
-            product.setName(e.selectFirst("h2").text());
-            product.setPrice(e.selectFirst("span").text());
-
-            lop.add(product);
-        }
-
-        lop.toString();
-        System.out.println(lop);
-
+        List<Product> products = scrapeProducts(URL1);
+        System.out.println(products.toString());
     }
 }
